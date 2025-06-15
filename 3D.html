@@ -1,0 +1,169 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 5.0 Transitional//JP">
+<html lang = "ja">
+<head>
+	<meta http-equiv = "Content-Type" content = "text/html; charset = UTF-8">
+	<meta http-equiv = "Content-Language" content = "ja">
+	<meta http-equiv = "Content-Style-Type" content = "text/css">
+	<style>
+	html,body{
+		font-family: monospace;
+		font-weight: bold;
+		margin: 0;
+ 	}
+	#console {
+		position:absolute;
+ 		left: 0px;
+ 		bottom: 0px;
+ 		margin: 0;
+ 		width: 100%;
+ 		height: 200px;
+ 		background-color:#CFCFCF;
+ 	}
+	#canvas {
+		position:absolute;
+ 		left: 0px;
+ 		top: 0px;
+ 		margin: 0;
+ 		background-color:#333333; 	}
+	#dummy {
+		margin: 0
+		background-color:#000000; 	}
+	input.number {
+		width: 80px
+	}
+	div.float {
+		float: left;
+ 		min-width: 300px;
+ 		max-width: 480px;
+	}
+	textarea {
+ 		min-width: 420px;
+ 		height: 120px;
+	}
+	</style>
+<SCRIPT type="text/javascript" src = "3dmain.js">
+
+</SCRIPT>
+</head>
+<body>
+<div id="dummy"></div>
+<div id="console">
+	キャンバスサイズ <SELECT id="CNVsize" onchange="setupcanvas();numcalc(1);">
+		<option value="1">320 x 1</option>
+		<option value="2">640 x 1</option>
+		<option value="3">960 x 1</option>
+		<option value="4">1280 x 1</option>
+		<option value="5" selected> 1600 x 1 </option>
+		<option value="6">1920 x 1</option>
+		<option value="6.66667">2160 x 1</option>
+	</SELECT>　<button name= "📷保存" onclick="saveCanvas(cvs);" >📷保存</button>　<br>
+<hr>
+<div class="float">　　　　　　　
+カメラ角度　　
+	<input type="radio" id="CAc" name="set" onchange="numcalc();" >固定　
+	<button name= "RESET"	onclick="setDefaltValue('ca');numcalc(1);" >RESET</button>　<br>
+	<div id="CA">
+
+	仰角:俯角:緯度 X軸<input type="range" id="rcaX" min="-1.57" max="1.57" step="0.01" 
+		onchange="dgEBI('caX').value=deg(this.value); numcalc(1);">
+	<input type="number" id="caX" min="-90" max="90" step="0.01" class="number"
+		onchange="dgEBI('rcaX').value=rad(this.value); numcalc(1);"> °<br>
+
+	水平:方角:経度 Y軸<input type="range" id="rcaY" min="-3.14" max="3.14" step="0.01" 
+		onchange="dgEBI('caY').value=deg(this.value); numcalc(1);">
+	<input type="number" id="caY" min="-180" max="180" step="0.01" class="number"
+		onchange="dgEBI('rcaY').value=rad(this.value); numcalc(1);"> °<br>
+
+	画面回転　　　 Z軸<input type="range" id="rcaZ" min="-3.14" max="3.14" step="0.01" 
+		onchange="dgEBI('caZ').value=deg(this.value); numcalc(1);">
+
+	<input type="number" id="caZ" min="-180" max="180" step="0.01" class="number"
+		onchange="dgEBI('rcaZ').value=rad(this.value); numcalc(1);"> °　　<br>
+	<input type="checkbox" id="caZc" onchange="numcalc(1);" checked>Z軸カメラロールしない
+	</div>
+</div>
+
+<div class="float">
+カメラ位置　　
+	<input type="radio" id="CPc" name="set" onchange="numcalc();" checked>固定　
+	<button name= "RESET" onclick = "setDefaltValue('cp');numcalc(1);">RESET</button><br>
+
+	<div id="CP">
+	X　<input type="range" id="rcpX" min="-100" max="100" step="0.1" 
+		onchange="dgEBI('cpX').value=this.value; numcalc(1);">
+	<input type="number" id="cpX" min="-100" max="100" step="0.1" class="number"
+		oninput="dgEBI('rcpX').value=this.value; numcalc(1);" > m<br>
+
+	Y　<input type="range" id="rcpY" min="-100" max="100" step="0.1"
+		onchange="dgEBI('cpY').value=this.value; numcalc(1);">
+	<input type="number" id="cpY" min="-100" max="100" step="0.1" class="number"
+		oninput="dgEBI('rcpY').value=this.value; numcalc(1);" > m<br>
+
+	Z　<input type="range" id="rcpZ" min="-100" max="100" step="0.1"
+		onchange="dgEBI('cpZ').value=this.value; numcalc(1);">
+	<input type="number" id="cpZ" min="-100" max="100" step="0.1" class="number"
+		oninput="dgEBI('rcpZ').value=this.value; numcalc(1);" > m　　　<br>
+	</div>
+</div>
+<div class="float">
+焦点位置　　　
+	<input type="radio" id="FPc" name="set" onchange="numcalc();" >固定　
+	<button name="RESET" onclick="setDefaltValue('fp');numcalc(1);">RESET</button><br>
+
+	<div id="FP">
+	X　<input type="range" id="rfpX" min="-100" max="100" step="0.1"
+		onchange="dgEBI('fpX').value=this.value; numcalc(1);">
+	<input type="number" id="fpX" min="-100" max="100" step="0.1" class="number"
+		oninput="dgEBI('rfpX').value=this.value; numcalc(1);"> m<br>
+
+	Y　<input type="range" id="rfpY" min="-100" max="100" step="0.1"
+		onchange="dgEBI('fpY').value=this.value; numcalc(1);">
+	<input type="number" id="fpY" min="-100" max="100" step="0.1" class="number"
+		oninput="dgEBI('rfpY').value=this.value; numcalc(1);"> m<br>
+
+	Z　<input type="range" id="rfpZ" min="-100" max="100" step="0.1"
+		onchange="dgEBI('fpZ').value=this.value; numcalc(1);">
+	<input type="number" id="fpZ" min="-100" max="100" step="0.1" class="number"
+		oninput="dgEBI('rfpZ').value=this.value; numcalc(1);"> m<br>
+	</div>
+</div>
+<div class="float">
+その他　　　　　
+	<input type="radio" id="fdisc" name="set" onchange="numcalc();" >固定　
+	<button name="RESET" onclick="setDefaltValue('av');numcalc(1);">RESET</button><br>
+	
+	<div id="other">
+		X画角　 <input type="range" id="ravX" min="-180" max="180" step="0.2" 
+			onchange="AngleView.x=this.value; AVcalc(1);numcalc(1);">
+
+		<input type="number" id="avX" class="number" min="-180" max="180" step="0.2" 
+			oninput="AngleView.x.value=this.value; AVcalc(1); numcalc(1);"> °<br>
+
+		35mm換算<input type="range" id="ravY" min="-1" max="1160" step="1" 
+			onchange="AngleView.y=this.value; AVcalc(2); numcalc(1);">
+
+		<input type="number" id="avY" class="number" min="-1" max="1160" step="1" 
+			oninput="AngleView.y=this.value; AVcalc(2); numcalc(1);"> mm<br>
+
+		disN　　<input type="range" id="ravZ" min="-100" max="100" step="0.1"
+			onchange="AngleView.z=this.value; AVcalc(3);;numcalc(1);">
+
+		<input type="number" id="avZ" class="number" min="-100" max="100" step="0.1"  oninput="AngleView.z.value=this.value;AVcalc(3);numcalc(1);">^<br>
+
+		焦点距離<input type="range" id="rfdis" min="0.01" max="1000" step="0.1" 
+			onchange="dgEBI('fdis').value=this.value; numcalc(1);">
+
+		<input type="number" id="fdis" class="number" min="0.01" max="1000" step="0.1" 
+			oninput="dgEBI('rfdis').value=this.value; numcalc(1);"> m<br>
+	</div>
+</div>
+<div class="float">
+	
+	
+</div>
+</div>
+
+
+</div>
+</body>
+</html>

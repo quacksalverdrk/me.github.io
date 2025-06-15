@@ -1,0 +1,726 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//JP">
+<html lang="ja">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<meta http-equiv="Content-Language" content="ja">
+	<link rel="stylesheet" type="text/css" href=".\Nimmt.css">
+</head>
+<body>
+<div onclick="HTML_BtnDisplay(ON);" id="title">6Nimmt!</div>
+<div id="message"></div>
+<div id="NEXT" class="indisplay"><button onclick="HTML_round_start();">Next Round Start!</button></div>
+<div id="SETTING" class="display">
+<hr>
+Player人数:　<SELECT id="PlayerNum">
+			<option value="2"  selected> 2</option>
+			<option value="3" > 3</option>
+			<option value="4"> 4</option>
+			<option value="5" > 5</option>
+			<option value="6" > 6</option>
+			<option value="7" > 7</option>
+			<option value="8" > 8</option>
+			<option value="9" > 9</option>
+			<option value="10" >10</option>
+		</SELECT>　　　
+難易度:　<SELECT id="method" >
+			<option value="7" label="01コスト小x数字大" >Pig</option>
+			<option value="8" label="01数字小" >Very Easy</option>
+			<option value="9" label="02コスト大x数字小">Boring</option>
+			<option value="0" label="03乱数">Madness</option>
+			<option value="4" label="04世界最弱">Easy</option>
+			<option value="5" label="05コスト小x数字小">Normal</option>
+			<option value="6" label="06コスト大x数字大">Hard</option>
+			<option value="1" label="06ボール">Very herd</option>
+			<option value="2" label="08ボール改" >Nightmare</option>
+			<option value="3" label="09ボール改二" selected>Hell</option>
+		</SELECT><br>
+<button onclick="HTML_game_start();">Game Start!</button>
+</div>
+<hr><div id="DisplayCard"></div>
+<hr><div id="SelectedCard"></div>
+<hr><div id="PlayerCard"></div>
+
+<SCRIPT type="text/javascript"><!--
+class Card{
+	p = -1;
+	static v = 0;
+	static  c = 1;
+	static s = "";
+	static  html = "";
+	constructor(v){
+		var csst=0;
+		var css=["w","b","y","r","p"];
+		this.v = v;
+		this.c=1;
+		this.p=-1;
+		if(v%5==0){this.c++;csst++;}
+		if(v%10==0){this.c++;csst++;}
+		if(v%11==0){this.c+=4;csst=3;}
+		if(v%55==0){this.c++;csst=4;}
+		this.s = "["+((v<10)?" ":"")+((v<100)?" ":"")+v+" ."+this.c+"]\t";
+		this.html = "<li class='"+css[csst]+"'><val><cost>　　"+this.c+"　　</cost><br>"+v+"</val></li>";
+	}
+}
+function cost(x){
+	var res = 0;
+	x.forEach (value => {res += value.c;})
+	return res;
+}
+function display(x){
+	var res = "";
+	x.forEach (value => {res += "p"+(value.p)+value.s;})
+	return res;
+}
+function distributeCard(){
+	PlayerCard=[];
+	for(var n=0; n<PlayerNum; n++){
+		PlayerCard.push([]);
+		for(var i=0;i<CardNum;i++){
+			var rand=Math.floor(Cards.length*Math.random());
+			PlayerCard[n].push(Anime(Cards.splice(rand,1)[0],"a_DistedAllCard_FI"));
+			PlayerCard[n][PlayerCard[n].length-1].p = n;
+		}
+		PlayerCard[n].sort((a,b) =>{return a.v-b.v;});
+	}
+}
+function makeCards(){
+	Cards=[];
+	for(var i=0;i<AllCardNum;i++){
+		Cards.push(new Card(i+1));
+		//ss += Cards[i].s;
+		//if(i%10==0){ss +="\n";}
+	}
+}
+function distributeDisplayCard(){
+	delete DisplayCard;
+	DisplayCard = [];
+	for(var i=0;i<DisplayRow;i++){
+		DisplayCard.push([]);
+		var rand = Math.floor(Cards.length*Math.random());
+		DisplayCard[i].push(Anime(Cards.splice(rand,1)[0],"a_DistedAllCard_FI"));
+	}
+	DisplayCard.sort((a,b) =>{return a[0].v-b[0].v});
+}
+function selecting(){
+	selectCard=[];
+	for(var n=0; n<PlayerNum-1; n++){
+		if(PlayerCard[n].length>0){
+			var res = selectAI(PlayerCard[n],n);
+			selectCard.push(Anime(PlayerCard[n].splice(res,1)[0],"a_SelectedCard_FI"));
+		}
+	}
+}
+function addminkey(x){
+	for(var i = DisplayCard.length-1;i >= 0;i--){
+		//console.log("key?=",i,DisplayCard[i][DisplayCard[i].length - 1].v);
+		if(DisplayCard[i][DisplayCard[i].length - 1].v < x.v){break;}
+	}
+	return i;
+}
+function mincost(){//最も低いコストのキーを返す
+	var res = DisplayCard.length-1;
+	var cos = cost(DisplayCard[res]);
+	for(var i = DisplayCard.length-1;i >= 0; i--){
+		if( cost(DisplayCard[i]) < cos ){
+			res = i;
+		}
+	}
+	return res;
+}
+function status(){
+	console.log("\n-------------------------------------------------------------- state",state)
+	console.log("\n\tselect: "+display(selectCard)+"\n\n");
+	console.log("\ndisplay:\n")
+	DisplayCard.forEach ((item) => {console.log("\t",display(item), cost(item));});
+	console.log("\nPlayerCard:\n")
+	PlayerCard.forEach ((val, idx) => {console.log("p"+idx+": "+display(val), cost(PlayerCard[idx]))});
+	console.log("\nPlayerCardsCost:\n")
+	PlayerCostCards.forEach ((val, idx) => {console.log("\tp"+idx+": "+display(val), cost(PlayerCostCards[idx]))});
+}
+function playNimmt(){
+	var win=[];
+	makeCards();
+	//Cards.forEach (value => {ss += value.s;	})
+	distributeCard();
+	distributeDisplayCard();
+	//status();
+	for(var Turn=0; Turn<CardNum; Turn++){
+		//console.log("\n------------------------------------Nimmt Turn["+(Turn)+"]--------------------------------------------")
+		selecting();//各プレイヤーから、出すカードを選ぶ。
+		selectCard.sort((a,b) =>{return a.v - b.v;});
+		//status();
+		selectCard.forEach (value => {
+			var player = value.p;
+			//console.log("\n\tselect: "+display(selectCard)+"\n\n");
+			//console.log("\n\tdisplay:\n")
+			//DisplayCard.forEach (item => {console.log(display(item), cost(item))});
+			var key = addminkey(value);
+			//console.log("\ttouch"+player+": ",value,"key:"+key);
+			if(key != -1){//列に追加。
+				DisplayCard[key].push(value);
+			}
+			if(key==-1 || DisplayCard[key].length==Nimmt){//追加する列無し or ニムト
+				key = (key==-1)?mincost():key;
+				//console.log("key "+key+": ",DisplayCard);
+				cat = DisplayCard[key].splice(0);
+				//console.log("cat: ",cat);
+				cat.forEach(item => PlayerCostCards[player].push(item));
+				DisplayCard[key].push(value);
+				DisplayCard.sort((a,b) =>{return a[0].v-b[0].v;});
+			}
+		});
+	}
+	//console.log(PlayerCostCards);
+	PlayerCostCards.forEach((item, player )=> win.push({"p":player, "cost":cost(item)}));
+	return win.sort((a,b) =>{return a["cost"] - b["cost"];});
+}
+function rank(X){
+	var res =Array(X.length).fill(1);
+	for(var i=0;i<X.length;i++){
+		for(var k=0;k<X.length;k++){
+			if(X[i]>X[k]){res[i]++;}
+		}
+	}
+	return res;
+}
+function selectAI ( pCard , pn ) { 
+	var res = 0, resRISK = false, mes_id=0;
+	if ( pn < 0 ){ pn = -pn; resRISK = true;}
+	METH = method[pn];
+	if ( METH == mes_id++ ) { 	res =Math.floor ( pCard.length * Math.random ( ) ) ; } 
+	else if ( METH == mes_id++ ) { //1 1.385
+			 // Kcst , cNUM [2.3125 , 7.40625]
+		var candy=[];
+		var Kcst=0 , min=0 , cNUM=0 ;
+		 // status ( ) ;
+		min = cost ( DisplayCard[mincost ( ) ] ) ;							 // 万が一のときに引き取る列のコスト合計
+		pCard.forEach ( ( p , idx ) => { 
+			key = addminkey ( p ) ;
+			Kcst = alfa[METH][0] * ( key == -1 ) ?min: ( cost ( DisplayCard[key] ) ) ;	 // 挿入される予定列のコスト合計2.15
+			cNUM = ( key == -1 ) ?0: ( alfa[METH][1] ** DisplayCard[key].length ) ;		 // 枚数ごとに乗数[7.5 56.25 422 3164 23730]7.5
+			var risk = Kcst + cNUM;
+			candy.push ( risk ) ; 								 // 累計リスク 単位をコストに統一しよう
+			if ( log_Lv > 2 ) console.log ( "\n\tris_cal: " , p.s , "\tpcard[" + idx + "]\tkey: " , key , "\tKcst: " , Kcst , "\tcNUM: " , cNUM , "\t[risk]: " , candy[idx] ) ;
+		 } ) ;
+		candy.forEach ( ( a , i , s ) => {	if ( a == 0 ) { return; }	res = ( s[res] == 0 ? i : ( a < s[res] ? i :res) );	} ) ;	 // リスク値の最も低いカードを出す。
+		if ( log_Lv > 2 ) console.log ( "\n\tmin_risk: " , res ) ;
+	 } 
+	else if ( METH == mes_id++ ) { //2 1.135
+		 // Kcst , cNUM
+		var candy=[]; // alfa2=[1 , 1 , 1.75 , 1.25 , 6 , -1];
+		if ( log_Lv > 2 ) { status ( ) ; } 
+		pCard.forEach ( ( p , idx ) => { 
+			var dist=0 , mean=0 , Kcst=0 , min=0 , rest=0 , cNUM=0 , risk=0;
+			key = addminkey ( p ) ;														 	// カードの入る列
+			minkey = mincost ( ) ;
+			rest = alfa[METH][0] * pCard.length * ( PlayerNum-1 ) ;								// プレイヤー人数 増えるカードの可能性
+			if ( key == -1 ) { 																// 万が一のときに引き取る列のコスト合計
+				dist = alfa[METH][1] * ( p.v - DisplayCard[0][DisplayCard[0].length - 1].v - (method.length-1) ) ;	 // 挿入されるカード列の値の差
+				min = ( cost ( DisplayCard[minkey] ) + rest ) ** ( DisplayCard[minkey].length ) + ( dist * alfa[METH][2] ) ;
+				if ( log_Lv > 2 ) { console.log ( "\n\minkey: " , minkey , "\t.cost: " , cost ( DisplayCard[minkey] ) , "\t.length: " , DisplayCard[minkey].length ) ; } 
+			 } else { 
+				dist = alfa[METH][3] * ( p.v - DisplayCard[key][DisplayCard[key].length - 1].v - (method.length-1) ) ; // 挿入されるカード列の値の差
+				Kcst = alfa[METH][4] * cost ( DisplayCard[key] ) ;								// 挿入される予定列のコスト合計
+				cNUM = alfa[METH][5] ** DisplayCard[key].length;									// 枚数ごとに乗数[2	4	8	16	32]
+				mean = ( p.v * alfa[METH][6] ) ;												// カードの値係数
+			 } 
+			risk = 1 + ( ( key == -1 ) ?min: dist * ( mean + rest + Kcst ) + cNUM ) ;
+			candy.push ( risk ) ; 					
+			if ( log_Lv > 2 ) { console.log ( "\n\tris_cal: " , p.s , "\tpcard[" + idx + "]\tkey: " , key , "\tmin: " , min , "\tmean: " , mean , "\trest: " , rest , "\tdist: " , dist , "\tKcst: " , Kcst , "\tcNUM: " , cNUM , "\t[risk]: " , risk ) ; } 
+		 } ) ;
+		candy.forEach ( ( a , i , s ) => {	if ( a == 0 ) { return; }	res = ( s[res] == 0 ? i : ( a < s[res] ? i :res) );	} ) ;	 // リスク値の最も低いカードを出す。
+		if ( log_Lv > 2 ) { console.log ( "\n\tmin_risk: " , res , "\tselect: " , pCard[res].s , "\t[risk]: " , candy[res] ) ; } 
+	} 
+	else if ( METH == mes_id++ ) { //3 1.122
+			 // Kcst , cNUM [2.3125 , 7.40625]
+		var candy=[];
+		var dist=0 , mean=0 , Kcst=0 , min=0 , rest=0 , cNUM=0 ;
+		 // status ( ) ;
+		min = cost ( DisplayCard[ mincost ( ) ] ) ;							 // 万が一のときに引き取る列のコスト合計
+		pCard.forEach( p => {mean += p.v/pCard.length;} ) 
+		pCard.forEach ( ( p , idx ) => { 
+			key = addminkey ( p ) ;
+			dist = alfa[METH][0] * ( p.v - DisplayCard[0][DisplayCard[0].length - 1].v - (method.length-1) ) ;	 // 挿入されるカード列の値の差
+			dist2 = alfa[METH][1] * ( p.v - mean ) ;
+			pval = ( p.v * alfa[METH][2] + AllCardNum * alfa[METH][3]) ;										 // カードの値係数
+			cNUM = ( key == -1  ? 0 :  alfa[METH][4] ** DisplayCard[key].length ) ;								 // 枚数ごとに乗数
+			Kcst =  ( key == -1 ? alfa[METH][5] * min : alfa[METH][6] * cost ( DisplayCard[key] ) ) ;	 // 挿入される予定列のコスト合計2.15
+			var risk = Kcst + dist2 + dist * (cNUM + pval ) * (cNUM==0 ? alfa[METH][7] : alfa[METH][8]);										// 累計リスク 単位をコストに統一しよう
+			candy.push (risk) ; 								 
+			if ( log_Lv > 2 ) console.log ( "\n\tris_cal: " , p.s , "\tpcard[" + idx + "]\tkey: " , key , "\tKcst: " , Kcst , "\tcNUM: " , cNUM , "\t[risk]: " , candy[idx] ) ;
+		 } ) ;
+		candy.forEach ( ( a , i , s ) => {	if ( a == 0 ) { return; }	res = ( s[res] == 0 ? i : ( a < s[res] ? i :res) );	} ) ;	 // リスク値の最も低いカードを出す。
+		if ( log_Lv > 2 ) { console.log ( "\n\tmin_risk: " , res , "\tselect: " , pCard[res].s , "\t[risk]: " , candy[res] ) ; } 
+	}
+	else if ( METH == mes_id++ ) {// copy method2
+		 // Kcst , cNUM
+		var candy=[]; // alfa2=[1 , 1 , 1.75 , 1.25 , 6 , -1];
+		if ( log_Lv > 2 ) { status ( ) ; } 
+		pCard.forEach ( ( p , idx ) => { 
+			var dist=0 ,dist2 = 0,dist3=0, mean=0 , Kcst=0 , min=0 , rest=0 , cNUM=0 , risk=0,id=0;
+			key = addminkey ( p ) ;														 	// カードの入る列
+			minkey = mincost ( ) ;
+			rest = alfa[METH][id++] * pCard.length * ( PlayerNum-1 ) ;								// プレイヤー人数 増えるカードの可能性
+			dist2 = alfa[METH][id++] * ( p.v - mean ) ;
+			pval = ( p.v * alfa[METH][id++] + AllCardNum * alfa[METH][id++]) ;					// カードの値係数
+			dist = alfa[METH][id++] * ( p.v - DisplayCard[0][DisplayCard[0].length - 1].v - (method.length-1) ) ;	 // 挿入されるカード列の値の差
+			min = ( cost ( DisplayCard[minkey] ) + rest ) ** ( DisplayCard[minkey].length ) + ( dist * alfa[METH][id++] ) ;// 万が一のときに引き取る列のコスト合計
+			if ( log_Lv > 2 ) { console.log ( "\n\minkey: " , minkey , "\t.cost: " , cost ( DisplayCard[minkey] ) , "\t.length: " , DisplayCard[minkey].length ) ; } 
+			dist3 = (key == -1?0:alfa[METH][id++] * ( p.v - DisplayCard[key][DisplayCard[key].length - 1].v - (method.length-1) )+ alfa[METH][id++]); // 挿入されるカード列の値の差
+			Kcst = (key == -1?0:alfa[METH][id++] * cost ( DisplayCard[key] ) );								// 挿入される予定列のコスト合計
+			cNUM = (key == -1?0:alfa[METH][id++] ** DisplayCard[key].length);									// 枚数ごとに乗数[2	4	8	16	32]
+			risk = 1 + ( ( key == -1 ) ?min:  dist2 + dist * (cNUM +pval) + rest + Kcst + cNUM ) ;
+			candy.push ( risk ) ; 					
+			if ( log_Lv > 2 ) { console.log ( "\n\tris_cal: " , p.s , "\tpcard[" + idx + "]\tkey: " , key , "\tmin: " , min , "\tmean: " , mean , "\trest: " , rest , "\tdist: " , dist , "\tKcst: " , Kcst , "\tcNUM: " , cNUM , "\t[risk]: " , risk ) ; } 
+		 } ) ;
+		candy.forEach ( ( a , i , s ) => {	if ( a == 0 ) { return; }	res = ( s[res] == 0 ? i : ( a < s[res] ? i :res) );	} ) ;	 // リスク値の最も低いカードを出す。
+		if ( log_Lv > 2 ) { console.log ( "\n\tmin_risk: " , res , "\tselect: " , pCard[res].s , "\t[risk]: " , candy[res] ) ; } 
+	} 
+	else if ( METH == mes_id++ ) {// copy method3
+			 // Kcst , cNUM [2.3125 , 7.40625]
+		var candy=[];
+		var dist=0 , mean=0 , Kcst=0 , min=0 , rest=0 , cNUM=0 ;
+		 // status ( ) ;
+		min = cost ( DisplayCard[ mincost ( ) ] ) ;							 // 万が一のときに引き取る列のコスト合計
+		pCard.forEach( p => {mean += p.v/pCard.length;} ) 
+		pCard.forEach ( ( p , idx ) => { 
+			key = addminkey ( p ) ;
+			var id = 0;
+			dist = alfa[METH][id++] * ( p.v - DisplayCard[0][DisplayCard[0].length - 1].v - (method.length-1) ) ;	 // 挿入されるカード列の値の差
+			dist2 = alfa[METH][id++] * ( p.v - mean ) ;
+			pval = ( p.v * alfa[METH][id++] + AllCardNum * alfa[METH][id++]) ;					// カードの値係数
+			cNUM = ( key == -1 ) ? 0 : ( alfa[METH][id++] ** DisplayCard[key].length ) ;		 // 枚数ごとに乗数
+			Kcst =  ( key == -1 ? alfa[METH][id++] * min : alfa[METH][id+1] *cost ( DisplayCard[key] ) ) ;	 // 挿入される予定列のコスト合計2.15
+			var risk = Kcst + dist2 + dist * (cNUM + pval ) * (cNUM==0 ? alfa[METH][id+2] : alfa[METH][id+3]);										// 累計リスク 単位をコストに統一しよう
+			candy.push (risk) ; 								 
+			if ( log_Lv > 2 ) console.log ( "\n\tris_cal: " , p.s , "\tpcard[" + idx + "]\tkey: " , key , "\tKcst: " , Kcst , "\tcNUM: " , cNUM , "\t[risk]: " , candy[idx] ) ;
+		 } ) ;
+		candy.forEach ( ( a , i , s ) => {	if ( a == 0 ) { return; }	res = ( s[res] == 0 ? i : ( a < s[res] ? i :res) );	} ) ;	 // リスク値の最も低いカードを出す。
+		if ( log_Lv > 2 ) { console.log ( "\n\tmin_risk: " , res , "\tselect: " , pCard[res].s , "\t[risk]: " , candy[res] ) ; } 
+	} 
+	else if ( METH == mes_id++ ) {// copy method2 vs 3
+		 // Kcst , cNUM
+		var candy=[]; // alfa2=[1 , 1 , 1.75 , 1.25 , 6 , -1];
+		if ( log_Lv > 2 ) { status ( ) ; } 
+		pCard.forEach ( ( p , idx ) => { 
+			var dist=0 ,dist2 = 0,dist3=0, mean=0 , Kcst=0 , min=0 , rest=0 , cNUM=0 , risk=0,id=0;
+			key = addminkey ( p ) ;														 	// カードの入る列
+			minkey = mincost ( ) ;
+			rest = alfa[METH][id++] * pCard.length * ( PlayerNum-1 ) ;								// プレイヤー人数 増えるカードの可能性
+			dist2 = alfa[METH][id++] * ( p.v - mean ) ;
+			pval = ( p.v * alfa[METH][id++] + AllCardNum * alfa[METH][id++]) ;					// カードの値係数
+			dist = alfa[METH][id++] * ( p.v - DisplayCard[0][DisplayCard[0].length - 1].v - (method.length-1) ) ;	 // 挿入されるカード列の値の差
+			min = ( cost ( DisplayCard[minkey] ) + rest ) ** ( DisplayCard[minkey].length ) + ( dist * alfa[METH][id++] ) ;// 万が一のときに引き取る列のコスト合計
+			if ( log_Lv > 2 ) { console.log ( "\n\minkey: " , minkey , "\t.cost: " , cost ( DisplayCard[minkey] ) , "\t.length: " , DisplayCard[minkey].length ) ; } 
+			dist3 = (key == -1?0:alfa[METH][id++] * ( p.v - DisplayCard[key][DisplayCard[key].length - 1].v - (method.length-1) )+ alfa[METH][id++]); // 挿入されるカード列の値の差
+			Kcst = (key == -1?0:alfa[METH][id++] * cost ( DisplayCard[key] ) );								// 挿入される予定列のコスト合計
+			cNUM = (key == -1?0:alfa[METH][id++] ** DisplayCard[key].length);									// 枚数ごとに乗数[2	4	8	16	32]
+			risk = 1 + ( ( key == -1 ) ?min:  dist2 + dist * (cNUM +pval) + rest + Kcst + cNUM ) ;
+			candy.push ( risk ) ; 					
+			if ( log_Lv > 2 ) { console.log ( "\n\tris_cal: " , p.s , "\tpcard[" + idx + "]\tkey: " , key , "\tmin: " , min , "\tmean: " , mean , "\trest: " , rest , "\tdist: " , dist , "\tKcst: " , Kcst , "\tcNUM: " , cNUM , "\t[risk]: " , risk ) ; } 
+		 } ) ;
+		candy.forEach ( ( a , i , s ) => {	if ( a == 0 ) { return; }	res = ( s[res] == 0 ? i : ( a < s[res] ? i :res) );	} ) ;	 // リスク値の最も低いカードを出す。
+		if ( log_Lv > 2 ) { console.log ( "\n\tmin_risk: " , res , "\tselect: " , pCard[res].s , "\t[risk]: " , candy[res] ) ; } 
+	} 
+	else if ( METH == mes_id++ ) {// copy method3 vs 2
+			 // Kcst , cNUM [2.3125 , 7.40625]
+		var candy=[];
+		var dist=0 , mean=0 , Kcst=0 , min=0 , rest=0 , cNUM=0 ;
+		 // status ( ) ;
+		min = cost ( DisplayCard[ mincost ( ) ] ) ;							 // 万が一のときに引き取る列のコスト合計
+		pCard.forEach( p => {mean += p.v/pCard.length;} ) 
+		pCard.forEach ( ( p , idx ) => { 
+			key = addminkey ( p ) ;
+			var id = 0;
+			dist = alfa[METH][id++] * ( p.v - DisplayCard[0][DisplayCard[0].length - 1].v - (method.length-1) ) ;	 // 挿入されるカード列の値の差
+			dist2 = alfa[METH][id++] * ( p.v - mean ) ;
+			pval = ( p.v * alfa[METH][id++] + AllCardNum * alfa[METH][id++]) ;					// カードの値係数
+			cNUM = ( key == -1 ) ? 0 : ( alfa[METH][id++] ** DisplayCard[key].length ) ;		 // 枚数ごとに乗数
+			Kcst =  ( key == -1 ? alfa[METH][id++] * min : alfa[METH][id+1] *cost ( DisplayCard[key] ) ) ;	 // 挿入される予定列のコスト合計2.15
+			var risk = Kcst + dist2 + dist * (cNUM + pval ) * (cNUM==0 ? alfa[METH][id+2] : alfa[METH][id+3]);										// 累計リスク 単位をコストに統一しよう
+			candy.push (risk) ; 								 
+			if ( log_Lv > 2 ) console.log ( "\n\tris_cal: " , p.s , "\tpcard[" + idx + "]\tkey: " , key , "\tKcst: " , Kcst , "\tcNUM: " , cNUM , "\t[risk]: " , candy[idx] ) ;
+		 } ) ;
+		candy.forEach ( ( a , i , s ) => {	if ( a == 0 ) { return; }	res = ( s[res] == 0 ? i : ( a < s[res] ? i :res) );	} ) ;	 // リスク値の最も低いカードを出す。
+		if ( log_Lv > 2 ) { console.log ( "\n\tmin_risk: " , res , "\tselect: " , pCard[res].s , "\t[risk]: " , candy[res] ) ; } 
+	} 
+	else if ( METH == mes_id++ ) {// copy method3 vs 0
+			 // Kcst , cNUM [2.3125 , 7.40625]
+		var candy=[];
+		var dist=0 , mean=0 , Kcst=0 , min=0 , rest=0 , cNUM=0 ;
+		 // status ( ) ;
+		min = cost ( DisplayCard[ mincost ( ) ] ) ;							 // 万が一のときに引き取る列のコスト合計
+		pCard.forEach( p => {mean += p.v/pCard.length;} ) 
+		pCard.forEach ( ( p , idx ) => { 
+			key = addminkey ( p ) ;
+			var id = 0;
+			dist = alfa[METH][id++] * ( p.v - DisplayCard[0][DisplayCard[0].length - 1].v - (method.length-1) ) ;	 // 挿入されるカード列の値の差
+			dist2 = alfa[METH][id++] * ( p.v - mean ) ;
+			pval = ( p.v * alfa[METH][id++] + AllCardNum * alfa[METH][id++]) ;					// カードの値係数
+			cNUM = ( key == -1 ) ? 0 : ( alfa[METH][id++] ** DisplayCard[key].length ) ;		 // 枚数ごとに乗数
+			Kcst =  ( key == -1 ? alfa[METH][id++] * min : alfa[METH][id+1] *cost ( DisplayCard[key] ) ) ;	 // 挿入される予定列のコスト合計2.15
+			var risk = Kcst + dist2 + dist * (cNUM + pval ) * (cNUM==0 ? alfa[METH][id+2] : alfa[METH][id+3]);										// 累計リスク 単位をコストに統一しよう
+			candy.push (risk) ; 								 
+			if ( log_Lv > 2 ) console.log ( "\n\tris_cal: " , p.s , "\tpcard[" + idx + "]\tkey: " , key , "\tKcst: " , Kcst , "\tcNUM: " , cNUM , "\t[risk]: " , candy[idx] ) ;
+		 } ) ;
+		candy.forEach ( ( a , i , s ) => {	if ( a == 0 ) { return; }	res = ( s[res] == 0 ? i : ( a < s[res] ? i :res) );	} ) ;	 // リスク値の最も低いカードを出す。
+		if ( log_Lv > 2 ) { console.log ( "\n\tmin_risk: " , res , "\tselect: " , pCard[res].s , "\t[risk]: " , candy[res] ) ; } 
+	} 
+	else if ( METH == mes_id++ ) { res = ( (pCard.length + pCard[0].v)%2==0?0:pCard.length-1)} 
+	else if ( METH == mes_id++ ) { 	pCard.sort ( ( a , b ) => { return ( a.v - b.v ) ; } ) ;pCard.sort ( ( a , b ) => { return - ( a.c - b.c ) ; } ) ; } 
+	else if ( METH == mes_id++ ) { 	pCard.sort ( ( a , b ) => { return ( a.v - b.v ) ; } ) ;pCard.sort ( ( a , b ) => { return ( a.c - b.c ) ; } ) ;} 
+	else if ( METH == mes_id++ ) { 	res = pCard.length-1; } 
+	else if ( METH == mes_id++ ) { 	res = 0; } 
+	return res;
+ } 
+function HTML_BtnDisplay(id, x){
+	dgI(id).setAttribute("class",(x>0)?"":"indisplay");
+	if(id == "SETTING"){
+		dgI("title").setAttribute("onclick",(x==ON)?"HTML_BtnDisplay('SETTING',OFF);":"HTML_BtnDisplay('SETTING',ON);");
+	}
+}
+function HTML_cards(XX){
+	var res = "";
+	XX.forEach (value => {//console.log(value.html);
+		if(value.html.match("a_stop")!=null){value.html = value.html.replace("a_DistedAllCard_FI a_stop", "");}
+		else if(value.html.match("a_DistedAllCard_FI")!=null){value.html = value.html.replace("a_DistedAllCard_FI", "a_DistedAllCard_FI a_stop");}
+		res += value.html;
+	})
+	
+	return res;
+}
+function variableCard(NUM,cls,val){
+	if(NUM<1){return "";}
+	var res = "";
+	for(var N=NUM;0!=N--;){
+		res += "<li class='"+((cls.length==2)?cls[0]:cls)+"'>";
+		res += (val!="")?"<val>":"";
+		res += (cls!="null")?("<cost class='"+((cls.length==2)?cls[1]:cls)+"'>"+val+"</cost><br>"):"";
+		res += (val!="")?val+"</val>":"";
+		res += "</li>";
+	}
+	return res;
+}
+function calcRisk(pCard, p){var METH=3;
+	var dist=0 , mean=0 , Kcst=0 , min=0 , rest=0 , cNUM=0 ;
+	key = addminkey ( p ) ;
+	var id = 0;
+	dist = alfa[METH][id++] * ( p.v - DisplayCard[0][DisplayCard[0].length - 1].v - (method.length-1) ) ;	 // 挿入されるカード列の値の差
+	dist2 = alfa[METH][id++] * ( p.v - mean ) ;
+	pval = ( p.v * alfa[METH][id++] + AllCardNum * alfa[METH][id++]) ;													 // カードの値係数
+	cNUM = ( key == -1 ) ? 0 : ( alfa[METH][id++] ** DisplayCard[key].length ) ;		 // 枚数ごとに乗数
+	Kcst =  ( key == -1 ? alfa[METH][id++] * min : alfa[METH][id+1] *cost ( DisplayCard[key] ) ) ; // 挿入される予定列のコスト合計2.15
+	var risk = Kcst + dist * (cNUM + pval ) + dist2;										// 累計リスク 単位をコストに統一しよう
+	if ( log_Lv > 2 ) console.log ( "\n\tris_cal: " , p.s , "\tpcard[" + idx + "]\tkey: " , key , "\tKcst: " , Kcst , "\tcNUM: " , cNUM , "\t[risk]: " , candy[idx] ) ;
+	return  Math.round(risk) ;
+}
+function HTML_PlayerCostCards(){
+	var res ="";
+	PlayerCostCards.forEach ((pCard,pn) => {
+		res += "<pp>"+HTML_cards(pCard);
+		res += "<risk>累計<br>失点</risk><risk>"+cost(PlayerCostCards[pn])+"</risk></pp>";
+	})
+	return res;
+}
+function Card_clicked(pCard,idx){
+	startAnimes("enable","a_stop",0,0);
+	if(state==selectBefore){//カード選択時、selectBefore:-1//MANUALpn = PlayerNum-1;
+		selectCard.push( PlayerCard[PlayerNum-1].splice(idx,1)[0] );
+		state = idx;
+		pCard.firstChild.setAttribute("style", "	opacity: 1;	z-index: 4;	transition: all .25s ease;	transform: translate("+(-90*idx)+"px, "+(-(PlayerNum-1)*95-157)+"px);");
+		e=message("カードを選択しました。");
+		setTimeout(()=>{pCard.firstChild.setAttribute("style", "transition: all 0s ease;opacity: 0;");},500);//移動したカードを閉じる
+	}
+	selectCard.forEach((cd) => {cd=Anime(cd,"","a_SelectedCard_FI");cd=Anime(cd,"","a_DistedAllCard_FI")})
+	setTimeout(HTML_refreshS,600,idx);//カードを開く
+	selectCard.sort((a,b) =>{return a.v - b.v;});
+	if(log_Lv>2)console.log("\n\tselect(sorted): "+display(selectCard)+"\n\n");
+	setTimeout(HTML_refreshS,1000,selectAfter);
+	state = selectAfter;
+
+	e=message("開いたカードを並び替えました。");
+	setTimeout(HTML_select,1500,(idx*1));
+}
+function cardsplice(value, adkey){
+	if(log_Lv>2)console.log("cardsplice(p"+value.p,value.v+", to key"+adkey+")");
+	if(method[value.p]== MANUAL &&adkey==-1){
+		if(log_Lv>2)console.log("引き取る列を選択してください");//引き取る列を選択してください
+		state = NeedKey;
+		return NeedKey;
+	}else if(method[value.p] != MANUAL){
+		if(log_Lv>2)if(adkey==-1){console.log("\n\tchange (mincost)adkey:\n")}
+		adkey = ((adkey==-1)?mincost():adkey);
+	}
+	//HTML_status(state);
+	if(log_Lv>2)console.log("key:  "+adkey);
+	var cat = DisplayCard[adkey].splice(0);
+	if(log_Lv>2)console.log("cat: ",display(cat));
+	cat.forEach(item => PlayerCostCards[value.p].push(item));//そのカードを出した人に失点カードを追加
+	if(log_Lv>2)console.log("\nPlayerCardsCost:\n")
+	if(log_Lv>2)PlayerCostCards.forEach ((val, idx) => {console.log("\tp"+idx+": "+display(val), cost(PlayerCostCards[idx]))});
+
+	if(log_Lv>2)console.log("\nvalue:",value.s," p:",value.p);
+	if(log_Lv>2)console.log("method[value.p]:",method[value.p],MANUAL,"key:",adkey)
+	return adkey;
+}
+function HTML_select(UserCardN){
+	keyN = Math.floor(UserCardN/10);
+	touch = selectCard[0];
+	do{
+		var  key=-1;//列選択
+		if( keyN > 0){//ユーザー列選択
+			key = keyN-1;
+			if(log_Lv>2)console.log("\tselected key:"+key);
+			while(method[touch.p]!= MANUAL){touch = selectCard[selectCard.indexOf(touch)+1]}
+
+			if(log_Lv>2)console.log("\tMANUAL touch p"+touch.p+"s: ",touch.s);
+		}else{//自動列選択
+			if(log_Lv>2)console.log(touch.p+"p addmin key(x): ",touch.s);
+			key = addminkey(touch);
+			if(log_Lv>2)console.log("\taddmin key res:"+key);
+		}
+		if( key==-1 || DisplayCard[key].length==Nimmt-1||keyN>0){//追加する列無し or ニムト or ユーザー列選択
+			key = cardsplice(touch,key)
+			if(key == NeedKey){break;}
+			keyN = 0;state = selectAfter;
+		}
+		touch = Anime(touch,"a_CardOpen0","a_CardOpen1");
+		var idx = selectCard.indexOf(touch)
+		setTimeout(HTML_refreshS, 0, selectAfter);
+		if( key != -1 ){	DisplayCard[key].push(Anime(touch,"a_DispCard_FI"));	}//列に追加。
+		touch = Anime(touch,"a_CardOpen1","a_CardOpen0");
+		setTimeout(HTML_refreshD, 5, selectAfter);
+		DisplayCard.sort((a,b) =>{return a[a.length-1].v-b[b.length-1].v;});
+		setTimeout(HTML_refreshD, 10, selectAfter);
+		if(log_Lv>2&& touch!=null)console.log("\ttouch p"+touch.p+"s: ",touch.s);
+		touch = selectCard[idx+1]
+	}while(touch!=null);
+	if(state != NeedKey){state = selectBefore; selectCard=[];}
+	DisplayCard.sort((a,b) =>{return a[a.length-1].v-b[b.length-1].v;});
+	return setTimeout(HTML_status,1000,state);
+}
+function HTML_refreshD(st){
+	if(log_Lv>2)console.log("\n\tdisplay:\n")
+	if(log_Lv>2)DisplayCard.forEach (item => {console.log(display(item), cost(item))});
+	var ss = "<pp>DisplayCard:</pp>"+ ((st==NeedKey)?"<pp class='plzSlct'>":"<pp>");
+	//場のカード
+	DisplayCard.forEach ((item,idx) => {
+		ss +=  (st==NeedKey? "<pp class='enable' onclick='HTML_select("+(idx+1)*10+")'>": "<pp>");//開始タグ
+		ss +=  HTML_cards(item)+ variableCard(Nimmt-item.length-1,"null","")+ variableCard(1,"null","☠")+ "<br>　失点："+cost(item)+"</pp>";
+	});
+	ss += "</pp>";
+	dgI("DisplayCard").innerHTML = "";
+	dgI("DisplayCard").innerHTML = ss;
+
+}
+function HTML_refreshS(st){
+	//選択カード
+	ss = "<pp>SelectedCard:</pp><pp>"
+	if(st == selectBefore && PlayerCard[PlayerNum-1].length > 0){
+		e=message("CPU思考中");
+		selecting();
+		ss += variableCard(1,"null","");
+		for(var N=PlayerNum-1;0!=N--;){ss += variableCard(1,["back a_SelectedCard_FI","back"],"?");e=message("CPU思考中…");};
+		ss += "</pp>";
+		g_selectN = 0;
+	}else if(selectCard.length==0){
+		ss += variableCard(1,"null","")+"</pp>";
+	}else {						//selectAfter
+		selectCard.forEach((pCard,pn) => {ss += pCard.html})
+		ss += "</pp>";
+		e=message("カードを開きました"+(st==NeedKey?"。　あなたが一番小さい数字を出したので、引き取る列を選んでください":"。"));
+	}
+	dgI("SelectedCard").innerHTML = "";
+	dgI("SelectedCard").innerHTML = ss;
+	startAnimes("a_CardOpen0","a_CardOpen1",700,10);	
+}
+function HTML_refreshP(st){
+	//プレイヤーカード
+	ss =  "<pp>Mode: "+PlayerNum+" Players　　("+diffcultyName+")</pp>";
+		var res ="";
+		PlayerCard.forEach ((pCard,pn) => {
+			if(method[pn]==MANUAL){//プレイヤーカード-------------------------------------------------
+				if(PlayerCard[pn].length==9){//初回のみ
+					pCard.forEach ((card,idx) => {	Anime(card,"","a_DistedAllCard_FI")	});
+				}
+				res += "<pp>PlayerCard:</pp>";
+				if(pCard.length == 0){
+					res += "<pp>"+variableCard(1,"null","");
+				}else if(state==selectBefore){//カード選択時、selectBefore:-1
+					res += "<pp  class='plzSlct'>"
+					pCard.forEach ((card,idx) => {
+						//console.log(card.html);
+						res += "<risk onclick='Card_clicked(this,"+idx+");'>"+enable(card.html, ON)+calcRisk(pCard,card)+"</risk>";
+					});
+				}else {//カード選択後、0～9
+					res += "<pp>"+ HTML_cards(pCard)+(state==NeedKey?"<risk></risk>":" ");
+				}
+			}else{					//エネミーカード-----------------------------------------------------------
+				console.log("PlayerCard[pn].length: ",PlayerCard[pn].length);
+				if(pCard.length == 0){
+					res += "<pp>"+variableCard(1,"null","");
+				}else if(PlayerCard[pn].length==9){//初回のみ
+					res += "<pp>"+variableCard(pCard.length,"back a_DistedAllCard_FI","?") + variableCard(1,"back a_middle a_DistedAllCard_FI","?");
+				}else{
+					res += "<pp>"+variableCard(pCard.length,"back ","?") + variableCard(1,"back a_middle","?");
+				}
+			}
+			//Cards.forEach((elem,idx)=>	{dgI("PlayerCard").innerHTML += enable(elem.html, ON); });
+
+			res += "<risk><br>累計<br>失点</risk>"+cost(PlayerCostCards[pn])+"</pp>";
+		})
+	ss += res;
+	dgI("PlayerCard").innerHTML = ss;
+	/*/プレイヤーコストカード
+	ss +=  "<br><br><br><pp>PlayerCostCards:</pp>";
+	ss += HTML_PlayerCostCards();
+	dgI("PlayerCard").innerHTML = ss;	*/
+
+}
+function HTML_status(st){
+	if(st != selectAfter)	state = st;
+	if(log_Lv>2)console.log("\n-------------------------------------------------------------- HTML_status",st)
+	HTML_refreshD(st);
+	HTML_refreshS(st);
+	HTML_refreshP(st);
+	
+	if(state == GameEnd){CardAnimetion(0); return 0;} 
+	if(log_Lv>2)console.log("\n:::::\n",st)
+	if(log_Lv>2)console.log("PlayerCard[PlayerNum-1].length + selectCard.length==0? :",PlayerCard[PlayerNum-1].length + selectCard.length);
+	if(PlayerCard[PlayerNum-1].length + selectCard.length == 0){
+		PlayerCostCards.forEach((pcCard,pn)=>{
+			var CostMax =0;
+			pcCard.forEach(cc => {CostMax+=cc.c;});
+			console.log(pn,"CostMax",CostMax)
+			if( CostMax > 66){
+				var win=[], ranking=[], 
+				ss =  "<pp>Mode:　"+PlayerNum+" Players　　("+diffcultyName+")</pp>";
+				e=message("ゲーム終了！");
+				PlayerCostCards.forEach((item, pn )=> {win.push({"p":pn, "cost":cost(item)});ranking.push(cost(item))});
+				ranking = rank(ranking);
+				HTML_BtnDisplay("SETTING",ON);
+				state=GameEnd;
+				ranking.forEach((rk, pn)=>{
+					ss += (pn==PlayerNum-1?"<pp>PlayerCard:</pp><pp>":"<pp>")+variableCard(1,"null",(rk==1?"♔":rk))+　"<risk><br>累計<br>失点</risk>"+cost(PlayerCostCards[pn])+"</pp>";
+				});
+				dgI("PlayerCard").innerHTML = ss;
+				win.sort((a,b) =>{return a.cost - b.cost;});
+				console.log("ゲーム終了！",win);
+				return win;
+			}
+			if(log_Lv>2)console.log(pn+"p CostMax:",CostMax);
+			if(state != GameEnd){e=message("誰も累計失点数が66を超えていないので、次のラウンドを始めます。");
+				CardAnimetion(5);
+				HTML_BtnDisplay("NEXT",ON);
+			}
+		});
+	}
+	else if(st == selectBefore){message("出すカードを選択してください");status()}
+	if(state != GameEnd) CardAnimetion(200);
+}
+function CardAnimetion(standard){
+	startAnimes("a_DistedAllCard_FI","a_stuck",standard*(0+PlayerNum/2),10);//Allcard　↑
+	startAnimes("a_DispCard_FI","a_stop",1+standard*(PlayerNum/2),20);//Ep card　↑
+
+	startAnimes("a_stuck"," ",standard*(2+PlayerNum/2),0);//Ep card　↑
+	startAnimes("a_middle","a_SubmitCard_e_FO",standard*(5+PlayerNum/2),20);
+
+	startAnimes("a_SelectedCard_FI","a_stuck",standard*(8+PlayerNum/2),20);//Open card　↑
+	//startAnimes("a_stuck","a_stop",standard*(7+PlayerNum/2),20);//Ep card　↑
+}
+function startAnimes(cls, addcls, ragTime, step){
+	for(N=0; N < dgC(cls).length ;N++){
+		setTimeout(startAnime, ragTime +N*step,	
+			dgC(cls)[N], cls, addcls
+		);	
+	}
+}
+function startAnime(ele, cls, addcls){
+		ele.classList.add(addcls);
+		ele.classList.remove(cls);
+}
+function dgI(a){return document.getElementById(a);}
+function dgT(a){return document.body.getElementsByTagName(a);}
+function dgC(a){return document.body.getElementsByClassName(a);}
+function HTML_game_start(){
+	PlayerNum = dgI("PlayerNum").value;
+	diffculty = dgI("method").value*1;
+	diffcultyName = dgI("method").options[dgI("method").selectedIndex].innerText;
+	PlayerCostCards=[];
+	for(var N=PlayerNum;0!=N--;){PlayerCostCards.push([]);}
+	method = Array(PlayerNum-1).fill(1*diffculty).concat(Array(1).fill(MANUAL));
+	HTML_round_start();
+}
+function HTML_round_start(){
+	console.log("\nHTML_round_start()\n")
+	makeCards();
+	e=message("カードを配ります。");
+	distributeCard();
+	e=message("場のカードをめくります。");
+	distributeDisplayCard();
+	HTML_BtnDisplay("NEXT",OFF);
+	HTML_BtnDisplay("SETTING",OFF);
+	state = selectBefore;
+	result.push(HTML_status(selectBefore));
+	if(result!=null){
+		var res=[], PlayerCost = Array(PlayerNum).fill(0);
+		RANK = rank(PlayerCost);
+		PlayerCost.forEach((item, player )=>{ res.push({"p":player, "cost":item, "rank":RANK[player]})} );
+		return res;
+	}
+}
+function enable(ss, sw){
+	var res = "",x=[];
+	x = ss.match(/class[=]['](.+)[']/)[1].slice(" ");
+	res = x + ((sw==OFF)?" ":" enable");
+	return ss.replace(/class[=]['](.+)[']/, "class='"+res+"'");
+}
+function Anime(cd, move, remove){
+	var res = "",x=[],ss = cd.html;
+	x = ss.match(/class[=]['](.+)[']/)[1].slice(" ");
+	if(remove!=null){x=x.replace(remove,"");}
+	res = ( x.replace("a_stop","").trim() +" "+ move).trim();
+	cd.html = ss.replace(/class[=]['](.+)[']/, "class='"+res+"'");
+	return	cd;
+}
+function wait(waitMsec) {
+  var startMsec = new Date();
+  while (new Date() - startMsec < waitMsec);
+	return 0;
+}
+function message(msg){
+	e=setTimeout(()=>{dgI("message").innerText = msg},0);
+	//e=wait(20)+e;
+	return e;
+}
+var NF2 = /-?\d+[.]?[\d]{0,4}/, Nimmt = 6, AllCardNum = 104, CardNum = 10, DisplayRow = 4, AllMethodNum = 10, log_Lv=1, state=-1,
+alfa= { 1:[5.285 , 1.8125] , 
+//	2:[3.401, 0.02, 14.0088, 0.02, -1.6528, 7.0993, 0.0312], 
+//	3:[9.2836, -7.5375, 10 , 0.0327, 8.2452, 11.6335, 0 ,0.5834] // [1 , 1.5 , 3 , 1 , 6 , 0]
+	2:[4.8117, 0.0918, 7.5061, 0.0165, -5.6927, 4.0334, 0.086, 0.4347, 8.4623] ,
+//	3:[0.0966, 4.0672, -1.0866, 0.6583, -1.9851, 0.6789, 49.0835, 2.6224, 0.8831]//
+3: [0.0544,2.2307,-1.1021,0.7914,-2.0094, -13.7161,36.1579,4.5826,1.1223] ,
+4: [8.3252, 5.0464, -4.0251, 3.7926, 0.0759, 17.3178, -1.1083, -2.8657, 22.5022, -6.441],
+5:[0.8201, -8.3261, 15.2315, 7.2693, 7.8076, 15.134, -8.6699, 3.571, 17.6463],
+//5:[0.5672, -8.5212, 15.6306, 7.1169, 7.8713, 14.9858, -9.7546, 3.8987, 17.7351] ,
+6:[-13.0362, 1.1347, 0.7848, 1.4721, 2.8911, 3.0911, 1.3251, -5.5297, -4.8179, 11.5958],
+//6: [21.3282, -18.1326, -0.7045, -1.9199, -1.7366, -6.8687, 2.4895, -0.7902, 26.798, -7.4368] ,
+7:[-26.3294, 27.6365, 0.1977, 1.8331, 29.6395, 10.8253, 9.5082, -12.5828, -11.4445, -3.9517],
+//8:[-5.3573, 5.3371, -3.5887, 3.5649, 2.4552, -1.215, 3.4163, -0.0479, -2.341, -1.861],
+8:[ -5.438, 9.2544, -1.4191, 8.7602, 6.0044, -2.4656, 0.4895, -2.6908, -2.1311, 3.2736]
+//8:[1,1,1,1,1 ,1,1,1,1,1],
+ // @5		3:[7.081400502 , 	-4.474390663 , 	0.205615306 , 	-1.222216022 , 	9.295685649 , 	-0.942536414] // [1 , 1.5 , 3 , 1 , 6 , 0]
+ } ,
+ PlayerNum = 0, N=0, diffculty=0, diffcultyName="", 
+ Cards=[], PlayerCard=[], PlayerCostCards=[], DisplayCard=[], selectCard=[],  meswin_num = Array(AllMethodNum).fill(0),result=[];
+var MANUAL = -2, selectBefore = -1, selectAfter = -2, ON =1, OFF=-1,  NeedKey = 100, GameEnd= -999, PlayerMAX = 10;
+window.onload = function(){
+	makeCards();
+	Cards.forEach((elem,idx)=>{dgI("DisplayCard").innerHTML += enable(elem.html, 1); });
+	HTML_BtnDisplay("SETTING",ON);
+	e=message("Player人数と難易度を決めてください。");
+}
+	// --></SCRIPT>
+</body>
+</html>
+

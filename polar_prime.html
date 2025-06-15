@@ -1,0 +1,173 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 5.0 Transitional//JP">
+<html lang="ja">
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<meta http-equiv="Content-Language" content="ja">
+	<meta http-equiv="Content-Style-Type" content="text/css">
+	<style>
+		*{
+			background-color:#000000;
+			color:#FFFFFF;
+		}
+	html,body{
+		margin: 0;
+	}
+	#console {
+		position:absolute;
+		left: 0px;
+		bottom: 0px;
+		margin: 0;
+		width: 100%;
+		height: 28px;
+		background-color:#CFCFCF;
+	}
+	#canvas {
+		position:absolute;
+		left: 0px;
+		top: 0px;
+		margin: 0;
+		background-color:#CCFFFF;
+	}
+	#dummy {
+		margin: 0
+		background-color:#000000;
+	}
+	</style>
+<SCRIPT type="text/javascript">  
+const dgEBI=(id)=>{return document.getElementById(id)};
+
+var P_array=[2];
+var nP_array=[1];
+
+  const redraw=()=>{
+    const PI2=Math.PI*2;
+    const PI=Math.PI;
+    const PIh=Math.PI*.5;
+    const PIq=Math.PI*.25;
+    const sinK=(x)=>{// 8 digit, 6.105e-8 s
+      var sign=1,xd=x%PI2;if(xd<0){sign*=-1;xd=-xd;}
+      if(xd%PI!=xd){sign*=-1;xd-=PI;}
+      if(xd%PIh!=xd){if(xd<0){sign*=-1;xd=-xd;}xd=PIh-xd%PIh;}xx=xd*xd;
+      return (sign*xd*(1-xx*(1-xx*(1-xx*(1-xx*(1-xx*(1-xx/156.458)/110)/72)/42)/20)/6));
+    }
+    const cosK=(x)=>{// 8 digit, 6.041e-8 s
+      x=xd=(x<0?-x:x);
+      var sign=1,xd=(x/PI2-Math.floor(x/PI2))*PI2;
+      if(xd%PI!=xd){sign*=-1;xd=Math.abs(xd-PI);}
+      if(xd%PIh!=xd){sign*=-1;xd-=PI;}xx=xd*xd;
+      return (sign*(1-xx*(1-xx*(1-xx*(1-xx*(1-xx*(1-xx/132.4479)/90)/56)/30)/12)/2));
+    }
+
+    const canvas = document.getElementsByTagName("canvas")[0];
+    let Width=canvas.width*0.5;
+    let Height=canvas.height*0.5;
+    let roll=1*document.getElementById('v_roll').value;
+    let scale=1*document.getElementById('v_scale').value;
+    let size= 2.485*(scale**0.1315)//1*document.getElementById('vA').value;
+    let ctx = canvas.getContext("2d");
+    ctx.reset();
+    ctx.lineCap = "round";
+    ctx.lineJoin= "round";
+    ctx.strokeStyle="#000080";
+    
+    ctx.lineWidth= size*2;
+    ctx.beginPath();
+      ctx.moveTo(0,Height);
+      ctx.lineTo(Width*2,Height);
+      ctx.moveTo(Width,0);
+      ctx.lineTo(Width,Height*2);
+    ctx.stroke();  
+    
+    ctx.lineWidth= size;
+    if(document.getElementById('nPrime').checked){
+      ctx.beginPath();
+      ctx.strokeStyle="#FF0000";
+      for(let a of nP_array.filter(n=> n < 1.4143*Width/scale)){
+        let x=Width +scale*a*cosK(roll*a);
+        let y=Width +scale*a*sinK(roll*a);
+        //ctx.fillRect(x, y, size,size);
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y);
+      }
+      ctx.stroke();  
+    }
+    ctx.strokeStyle="#00FFFF";
+    ctx.beginPath();
+    for(let a of P_array.filter(n=> n < 1.4143*Width/scale )){
+      let x=Width +scale*a*cosK(roll*a);
+      let y=Width +scale*a*sinK(roll*a);
+        //ctx.fillRect(x, y, size,size);
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y);
+    }
+    ctx.stroke();  
+    
+    console.log("redraw");
+  };
+
+window.addEventListener("load",()=>{
+  
+  const jk=(n)=>{//素数判定,追加型
+    var end = Math.sqrt(n)+1;
+    for(let item of P_array){
+      if(n%item===0){return false;}
+      if(item > end){break;}
+    }
+    P_array.push(n);
+    return true;
+  }
+
+  for(n=3;n<94906257;n+=2){
+      if(jk(n)==false){nP_array.push(n);}
+  }
+  document.getElementById('s_roll').value = document.getElementById('v_roll').value;
+  document.getElementById('s_scale').value = document.getElementById('v_scale').value;
+  //document.getElementById('sA').value = document.getElementById('vA').value;
+  
+  redraw();
+  document.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    // スクロール量を取得
+    const deltaY = e.deltaY;
+    
+    // スクロール方向を判定してメッセージを表示
+    if (deltaY < 0) {
+      document.getElementById('v_scale').value = 0.5*document.getElementById('v_scale').value;
+      document.getElementById('s_scale').value = document.getElementById('v_scale').value;
+    } else {
+      document.getElementById('v_scale').value = 2*document.getElementById('v_scale').value;
+      document.getElementById('s_scale').value = document.getElementById('v_scale').value;
+    }
+    redraw();
+  });
+});
+ //0.86525597943226508721777478964609    e/Pi
+ // 2.7182818284590452353602874713527   e
+ // 0.36787944117144232159552377016146  1/e
+ //0.31830988618379067153776752674503    1/pi
+  // 3.1415926535897932384626433832795   pi
+</SCRIPT>
+</head>
+<body>
+<div id="dummy"><canvas width="2000" height="2000"></canvas></div>
+<div id="console">
+
+<div style="float: left;">
+	　rollringRatio：<input type="range" id="v_roll" value="1" min="0.0" max="10" step="0.0000000000001"  oninput="document.getElementById('s_roll').value = this.value;redraw();" >
+　　x<input type="text" id="s_roll" value="" oninput="document.getElementById('v_roll').value = this.value;redraw();"></output>　
+
+	　scaleRatio：<input type="range" id="v_scale" value="0.00002" min="0.00001" max="10" step="0.00001"  oninput="document.getElementById('s_scale').value = this.value;redraw();" >
+　　x<input type="text" id="s_scale" value="" oninput="document.getElementById('v_scale').value = this.value;redraw();"></output>　
+<!--
+	　dot：<input type="range" id="vA" value="2" min="0.5" max="10" step="0.5" oninput="document.getElementById('sA').value = this.value;redraw();">
+	　<input type="text" id="sA" oninput="document.getElementById('vA').value = this.value;redraw();" value=""></output>px
+-->
+	　<input type="checkbox" id="nPrime" oninput="redraw();">素数以外
+  
+	　<button id="redraw">再描画</button>
+</div>
+
+</div>
+</body>
+</html>
